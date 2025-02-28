@@ -35,15 +35,15 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     initializeCards();
   }
 
-  // 8쌍의 카드(총 16개)를 생성하고 무작위로 섞습니다.
+  // 8쌍의 카드(총 16개)를 생성 후 무작위로 섞습니다.
   void initializeCards() {
     List<String> values = ['🐶', '🐱', '🐰', '🦊', '🐼', '🐨', '🐯', '🦁'];
-    List<String> allValues = [...values, ...values]; // 쌍으로 복제
+    List<String> allValues = [...values, ...values];
     allValues.shuffle();
     cards = allValues.map((value) => MemoryCardData(value: value)).toList();
   }
 
-  // 카드 탭 이벤트 처리 (이미 뒤집혀있거나 매칭된 카드라면 무시)
+  // 카드 탭 시 처리 (이미 뒤집혔거나 매칭된 카드면 무시)
   void onCardTap(int index) {
     if (cards[index].isFlipped || cards[index].isMatched) return;
 
@@ -52,20 +52,18 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
       flippedIndices.add(index);
     });
 
-    // 두 장이 뒤집혔다면 매칭 여부를 확인합니다.
+    // 두 장 뒤집혔을 때 매칭 여부 확인
     if (flippedIndices.length == 2) {
       Future.delayed(Duration(milliseconds: 500), () {
         int firstIndex = flippedIndices[0];
         int secondIndex = flippedIndices[1];
         if (cards[firstIndex].value == cards[secondIndex].value) {
-          // 매칭 성공 시 해당 카드들을 매칭 상태로 만들고 점수 증가
           setState(() {
             cards[firstIndex].isMatched = true;
             cards[secondIndex].isMatched = true;
             score += 10;
           });
         } else {
-          // 매칭 실패 시 다시 뒤집기
           setState(() {
             cards[firstIndex].isFlipped = false;
             cards[secondIndex].isFlipped = false;
@@ -92,14 +90,19 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
             mainAxisSpacing: 8.0,
           ),
           itemBuilder: (context, index) {
+            MemoryCardData card = cards[index];
+            // key에 상태값을 포함시켜 재빌드 유도
             return MemoryCard(
-              data: cards[index],
+              key: ValueKey('${card.value}-${card.isFlipped}-${card.isMatched}'),
+              value: card.value,
+              isFlipped: card.isFlipped,
+              isMatched: card.isMatched,
               onTap: () => onCardTap(index),
             );
           },
         ),
       ),
-      // 하단에 멋진 전광판 스타일의 점수판 구현
+      // 하단 전광판 스타일의 점수판
       bottomNavigationBar: Container(
         height: 80,
         decoration: BoxDecoration(
@@ -130,7 +133,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   }
 }
 
-// 각 카드의 데이터 모델 (이모지, 뒤집힘 여부, 매칭 여부)
+// 각 카드의 데이터 모델
 class MemoryCardData {
   final String value;
   bool isFlipped;
@@ -142,18 +145,27 @@ class MemoryCardData {
   });
 }
 
-// 카드 위젯 (탭 시 flip 애니메이션)
+// 카드 위젯 (개별 애니메이션 포함)
 class MemoryCard extends StatefulWidget {
-  final MemoryCardData data;
+  final String value;
+  final bool isFlipped;
+  final bool isMatched;
   final VoidCallback onTap;
 
-  MemoryCard({required this.data, required this.onTap});
+  MemoryCard({
+    Key? key,
+    required this.value,
+    required this.isFlipped,
+    required this.isMatched,
+    required this.onTap,
+  }) : super(key: key);
 
   @override
   _MemoryCardState createState() => _MemoryCardState();
 }
 
-class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateMixin {
+class _MemoryCardState extends State<MemoryCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -165,8 +177,8 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       vsync: this,
     );
     _animation = Tween<double>(begin: 0.0, end: pi).animate(_controller);
-    // 초기 상태에 따라 애니메이션 진행
-    if (widget.data.isFlipped) {
+    // 초기 상태에 따른 애니메이션 진행
+    if (widget.isFlipped) {
       _controller.forward();
     } else {
       _controller.reverse();
@@ -176,8 +188,9 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   @override
   void didUpdateWidget(MemoryCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.data.isFlipped != widget.data.isFlipped) {
-      if (widget.data.isFlipped) {
+    // isFlipped 값이 변경되면 애니메이션을 실행합니다.
+    if (oldWidget.isFlipped != widget.isFlipped) {
+      if (widget.isFlipped) {
         _controller.forward();
       } else {
         _controller.reverse();
@@ -222,7 +235,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
         ),
         child: Center(
           child: Text(
-            widget.data.value,
+            widget.value,
             style: TextStyle(fontSize: 32),
           ),
         ),
@@ -238,10 +251,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
         borderRadius: BorderRadius.circular(8),
       ),
       child: Center(
-        child: Text(
-          '',
-          style: TextStyle(fontSize: 32, color: Colors.white),
-        ),
+        child: Text(''),
       ),
     );
   }
