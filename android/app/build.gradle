@@ -1,6 +1,0 @@
-// 이 파일은 flutter_launcher_icons가 minSdk 값을 읽도록 임시로 제공하는 파일입니다.
-android {
-    defaultConfig {
-        minSdkVersion 21
-    }
-}
