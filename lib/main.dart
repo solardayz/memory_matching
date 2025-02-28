@@ -54,6 +54,17 @@ class MemoryGameScreen extends StatelessWidget {
           },
         ),
       ),
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.all(16.0),
+        child: Text(
+          '메모리 게임',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
 }
