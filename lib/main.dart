@@ -33,8 +33,9 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   bool isGameOver = false;
   bool gameStarted = false;
 
-  // 게임을 시작할 때 상태 초기화 및 타이머 시작
+  // 게임 시작 (또는 재시작)
   void startGame() {
+    timer?.cancel();
     setState(() {
       gameStarted = true;
       secondsElapsed = 0;
@@ -48,7 +49,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
         setState(() {
           secondsElapsed++;
         });
-        // 60초가 넘었고 모든 카드가 매칭되지 않았으면 게임 종료
+        // 60초가 넘었는데 모든 카드가 매칭되지 않았다면 게임 종료
         if (secondsElapsed >= 60 && !cards.every((card) => card.isMatched)) {
           setState(() {
             isGameOver = true;
@@ -65,7 +66,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     super.dispose();
   }
 
-  // 8쌍의 카드(총 16개)를 생성 후 무작위로 섞습니다.
+  // 8쌍의 카드(총 16개)를 생성 후 무작위로 섞음
   void initializeCards() {
     List<String> values = ['🐶', '🐱', '🐰', '🦊', '🐼', '🐨', '🐯', '🦁'];
     List<String> allValues = [...values, ...values];
@@ -73,9 +74,12 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     cards = allValues.map((value) => MemoryCardData(value: value)).toList();
   }
 
-  // 카드 탭 시 처리 (게임 종료 상태이거나 이미 뒤집혔거나 매칭된 카드면 무시)
+  // 카드 탭 처리 (이미 매칭되었거나 뒤집혔거나, 두 카드가 이미 뒤집힌 상태면 무시)
   void onCardTap(int index) {
-    if (isGameOver || cards[index].isFlipped || cards[index].isMatched) return;
+    if (isGameOver ||
+        cards[index].isFlipped ||
+        cards[index].isMatched ||
+        flippedIndices.length == 2) return;
 
     setState(() {
       cards[index].isFlipped = true;
@@ -86,6 +90,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
       Future.delayed(Duration(milliseconds: 500), () {
         int firstIndex = flippedIndices[0];
         int secondIndex = flippedIndices[1];
+
         if (cards[firstIndex].value == cards[secondIndex].value) {
           setState(() {
             cards[firstIndex].isMatched = true;
@@ -110,7 +115,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     }
   }
 
-  // 게임 종료 후 상태 메시지 (1분 안에 성공하면 "축하합니다", 아니면 "시간 초과했습니다")
+  // 게임 종료 후 상태 메시지 (60초 이내 완성 시 "축하합니다", 아니면 "시간 초과했습니다")
   String get statusMessage {
     if (cards.every((card) => card.isMatched)) {
       return secondsElapsed <= 60 ? "축하합니다" : "시간 초과했습니다";
@@ -125,6 +130,17 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Memory Matching Game'),
+        actions: gameStarted
+            ? [
+          TextButton(
+            onPressed: startGame,
+            child: Text(
+              '다시 시작하기',
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          )
+        ]
+            : null,
       ),
       body: gameStarted
           ? Padding(
@@ -139,7 +155,8 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
           itemBuilder: (context, index) {
             MemoryCardData card = cards[index];
             return MemoryCard(
-              key: ValueKey('${card.value}-${card.isFlipped}-${card.isMatched}'),
+              key: ValueKey(
+                  '${card.value}-${card.isFlipped}-${card.isMatched}'),
               value: card.value,
               isFlipped: card.isFlipped,
               isMatched: card.isMatched,
@@ -203,7 +220,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   }
 }
 
-// 각 카드의 데이터 모델
+// 카드 데이터 모델
 class MemoryCardData {
   final String value;
   bool isFlipped;
@@ -215,7 +232,7 @@ class MemoryCardData {
   });
 }
 
-// 카드 위젯 (애니메이션 포함)
+// 개별 카드 위젯 (애니메이션 포함)
 class MemoryCard extends StatefulWidget {
   final String value;
   final bool isFlipped;
