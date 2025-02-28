@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 
 void main() {
   runApp(MemoryMatchingGameApp());
@@ -33,6 +34,9 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   bool isGameOver = false;
   bool gameStarted = false;
 
+  // audioplayers 6.2.0의 AudioPlayer 생성
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
   // 게임 시작 및 재시작: 상태 초기화, 카드 초기화, 타이머 시작
   void startGame() {
     timer?.cancel();
@@ -49,12 +53,13 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
         setState(() {
           secondsElapsed++;
         });
-        // 60초가 넘었고 모든 카드가 매칭되지 않았으면 게임 종료
+        // 60초가 넘었는데 모든 카드가 매칭되지 않았으면 게임 종료 및 실패 사운드 재생
         if (secondsElapsed >= 60 && !cards.every((card) => card.isMatched)) {
           setState(() {
             isGameOver = true;
           });
           timer?.cancel();
+          _audioPlayer.play(AssetSource('sounds/failure.mp3'));
         }
       }
     });
@@ -63,6 +68,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   @override
   void dispose() {
     timer?.cancel();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -96,20 +102,29 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
             cards[firstIndex].isMatched = true;
             cards[secondIndex].isMatched = true;
           });
+          // 매칭 성공 사운드 재생
+          _audioPlayer.play(AssetSource('sounds/match.mp3'));
         } else {
           setState(() {
             cards[firstIndex].isFlipped = false;
             cards[secondIndex].isFlipped = false;
           });
+          // 매칭 실패(미스매칭) 사운드 재생
+          _audioPlayer.play(AssetSource('sounds/mismatch.mp3'));
         }
         flippedIndices.clear();
 
-        // 모든 카드가 매칭되면 게임 종료
+        // 모든 카드가 매칭되면 게임 종료 및 성공/실패 사운드 재생
         if (cards.every((card) => card.isMatched)) {
           setState(() {
             isGameOver = true;
           });
           timer?.cancel();
+          if (secondsElapsed <= 60) {
+            _audioPlayer.play(AssetSource('sounds/success.mp3'));
+          } else {
+            _audioPlayer.play(AssetSource('sounds/failure.mp3'));
+          }
         }
       });
     }
@@ -159,7 +174,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
               ),
             ),
           ),
-          // "다시 시작하기" 버튼
+          // "다시 시작하기" 버튼 (그리드와 점수판 사이)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: ElevatedButton(
