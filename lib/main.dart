@@ -33,7 +33,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   bool isGameOver = false;
   bool gameStarted = false;
 
-  // 게임 시작 (또는 재시작)
+  // 게임 시작 및 재시작: 상태 초기화, 카드 초기화, 타이머 시작
   void startGame() {
     timer?.cancel();
     setState(() {
@@ -49,7 +49,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
         setState(() {
           secondsElapsed++;
         });
-        // 60초가 넘었는데 모든 카드가 매칭되지 않았다면 게임 종료
+        // 60초가 넘었고 모든 카드가 매칭되지 않았으면 게임 종료
         if (secondsElapsed >= 60 && !cards.every((card) => card.isMatched)) {
           setState(() {
             isGameOver = true;
@@ -74,7 +74,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     cards = allValues.map((value) => MemoryCardData(value: value)).toList();
   }
 
-  // 카드 탭 처리 (이미 매칭되었거나 뒤집혔거나, 두 카드가 이미 뒤집힌 상태면 무시)
+  // 카드 탭 처리 (게임 종료 상태이거나 이미 뒤집혔거나 매칭된 카드면 무시)
   void onCardTap(int index) {
     if (isGameOver ||
         cards[index].isFlipped ||
@@ -130,40 +130,89 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Memory Matching Game'),
-        actions: gameStarted
-            ? [
-          TextButton(
-            onPressed: startGame,
-            child: Text(
-              '다시 시작하기',
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
-          )
-        ]
-            : null,
       ),
       body: gameStarted
-          ? Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: GridView.builder(
-          itemCount: cards.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: gridSize,
-            crossAxisSpacing: 8.0,
-            mainAxisSpacing: 8.0,
+          ? Column(
+        children: [
+          // 그리드 영역
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: GridView.builder(
+                itemCount: cards.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: gridSize,
+                  crossAxisSpacing: 8.0,
+                  mainAxisSpacing: 8.0,
+                ),
+                itemBuilder: (context, index) {
+                  MemoryCardData card = cards[index];
+                  return MemoryCard(
+                    key: ValueKey(
+                        '${card.value}-${card.isFlipped}-${card.isMatched}'),
+                    value: card.value,
+                    isFlipped: card.isFlipped,
+                    isMatched: card.isMatched,
+                    onTap: () => onCardTap(index),
+                  );
+                },
+              ),
+            ),
           ),
-          itemBuilder: (context, index) {
-            MemoryCardData card = cards[index];
-            return MemoryCard(
-              key: ValueKey(
-                  '${card.value}-${card.isFlipped}-${card.isMatched}'),
-              value: card.value,
-              isFlipped: card.isFlipped,
-              isMatched: card.isMatched,
-              onTap: () => onCardTap(index),
-            );
-          },
-        ),
+          // "다시 시작하기" 버튼
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: ElevatedButton(
+              onPressed: startGame,
+              child: Text(
+                '다시 시작하기',
+                style: TextStyle(fontSize: 20),
+              ),
+            ),
+          ),
+          // 점수판 영역 (상태 메시지 및 경과 시간)
+          Container(
+            height: 80,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.redAccent, Colors.orangeAccent],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black45,
+                  blurRadius: 8,
+                  offset: Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (statusMessage.isNotEmpty)
+                    Text(
+                      statusMessage,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  Text(
+                    'Time: ${secondsElapsed}s',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       )
           : Center(
         child: ElevatedButton(
@@ -174,53 +223,11 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: gameStarted
-          ? Container(
-        height: 100,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.redAccent, Colors.orangeAccent],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black45,
-              blurRadius: 8,
-              offset: Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (statusMessage.isNotEmpty)
-                Text(
-                  statusMessage,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              Text(
-                'Time: ${secondsElapsed}s',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 2,
-                ),
-              ),
-            ],
-          ),
-        ),
-      )
-          : null,
     );
   }
 }
 
-// 카드 데이터 모델
+// 각 카드의 데이터 모델
 class MemoryCardData {
   final String value;
   bool isFlipped;
@@ -232,7 +239,7 @@ class MemoryCardData {
   });
 }
 
-// 개별 카드 위젯 (애니메이션 포함)
+// 카드 위젯 (애니메이션 포함)
 class MemoryCard extends StatefulWidget {
   final String value;
   final bool isFlipped;
