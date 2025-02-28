@@ -30,16 +30,26 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   List<int> flippedIndices = [];
   int secondsElapsed = 0;
   Timer? timer;
+  bool isGameOver = false;
 
   @override
   void initState() {
     super.initState();
     initializeCards();
-    // 타이머 시작: 1초마다 초를 증가
     timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
-      setState(() {
-        secondsElapsed++;
-      });
+      // 게임이 종료되지 않은 경우에만 시간 증가
+      if (!isGameOver) {
+        setState(() {
+          secondsElapsed++;
+        });
+        // 1분(60초)이 넘었는데 아직 매칭이 완료되지 않은 경우
+        if (secondsElapsed >= 60 && !cards.every((card) => card.isMatched)) {
+          setState(() {
+            isGameOver = true;
+          });
+          timer?.cancel();
+        }
+      }
     });
   }
 
@@ -57,9 +67,9 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     cards = allValues.map((value) => MemoryCardData(value: value)).toList();
   }
 
-  // 카드 탭 시 처리 (이미 뒤집혔거나 매칭된 카드면 무시)
+  // 카드 탭 시 처리 (게임이 끝났거나 이미 뒤집힌 카드면 무시)
   void onCardTap(int index) {
-    if (cards[index].isFlipped || cards[index].isMatched) return;
+    if (isGameOver || cards[index].isFlipped || cards[index].isMatched) return;
 
     setState(() {
       cards[index].isFlipped = true;
@@ -84,12 +94,26 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
         }
         flippedIndices.clear();
 
-        // 게임 종료 체크: 모든 카드가 매칭되었으면 타이머 중지
+        // 모든 카드가 매칭되면 게임 종료
         if (cards.every((card) => card.isMatched)) {
+          setState(() {
+            isGameOver = true;
+          });
           timer?.cancel();
         }
       });
     }
+  }
+
+  // 게임 상태에 따른 메시지 반환
+  String get statusMessage {
+    if (cards.every((card) => card.isMatched)) {
+      // 모든 카드를 맞췄으면 1분 이내에 맞춘 경우에만 축하 메시지, 아니면 시간 초과 메시지
+      return secondsElapsed <= 60 ? "축하합니다" : "시간 초과했습니다";
+    } else if (secondsElapsed >= 60) {
+      return "시간 초과했습니다";
+    }
+    return "";
   }
 
   @override
@@ -119,9 +143,9 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
           },
         ),
       ),
-      // 하단 전광판 스타일의 타이머 표시 (경과 시간)
+      // 하단 전광판: 상태 메시지(시간 위에)와 경과 시간 표시
       bottomNavigationBar: Container(
-        height: 80,
+        height: 100,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [Colors.redAccent, Colors.orangeAccent],
@@ -135,14 +159,28 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
           ],
         ),
         child: Center(
-          child: Text(
-            'Time: ${secondsElapsed}s',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: 2,
-            ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (statusMessage.isNotEmpty)
+                Text(
+                  statusMessage,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              Text(
+                'Time: ${secondsElapsed}s',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 2,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -162,7 +200,7 @@ class MemoryCardData {
   });
 }
 
-// 카드 위젯 (개별 애니메이션 포함)
+// 카드 위젯 (애니메이션 포함)
 class MemoryCard extends StatefulWidget {
   final String value;
   final bool isFlipped;
@@ -187,14 +225,14 @@ class _MemoryCardState extends State<MemoryCard>
   late Animation<double> _animation;
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
     _controller = AnimationController(
       duration: Duration(milliseconds: 400),
       vsync: this,
     );
     _animation = Tween<double>(begin: 0.0, end: pi).animate(_controller);
-    // 초기 상태에 따른 애니메이션 진행
+    // 초기 상태에 따라 애니메이션 진행
     if (widget.isFlipped) {
       _controller.forward();
     } else {
@@ -215,13 +253,13 @@ class _MemoryCardState extends State<MemoryCard>
   }
 
   @override
-  void dispose(){
+  void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: widget.onTap,
       child: AnimatedBuilder(
@@ -239,7 +277,7 @@ class _MemoryCardState extends State<MemoryCard>
     );
   }
 
-  // 앞면 (카드가 뒤집혀서 보일 때)
+  // 카드 앞면 (뒤집혀서 보일 때)
   Widget _buildFront() {
     return Transform(
       transform: Matrix4.identity()..rotateY(pi),
@@ -259,7 +297,7 @@ class _MemoryCardState extends State<MemoryCard>
     );
   }
 
-  // 뒷면 (초기 상태)
+  // 카드 뒷면 (초기 상태)
   Widget _buildBack() {
     return Container(
       decoration: BoxDecoration(
