@@ -52,7 +52,6 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
       flippedIndices.add(index);
     });
 
-    // 두 장 뒤집혔을 때 매칭 여부 확인
     if (flippedIndices.length == 2) {
       Future.delayed(Duration(milliseconds: 500), () {
         int firstIndex = flippedIndices[0];
@@ -91,7 +90,6 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
           ),
           itemBuilder: (context, index) {
             MemoryCardData card = cards[index];
-            // key에 상태값을 포함시켜 재빌드 유도
             return MemoryCard(
               key: ValueKey('${card.value}-${card.isFlipped}-${card.isMatched}'),
               value: card.value,
@@ -133,7 +131,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   }
 }
 
-// 각 카드의 데이터 모델
+// 카드 데이터 모델
 class MemoryCardData {
   final String value;
   bool isFlipped;
@@ -145,7 +143,7 @@ class MemoryCardData {
   });
 }
 
-// 카드 위젯 (개별 애니메이션 포함)
+// 개별 카드 위젯 (애니메이션 포함)
 class MemoryCard extends StatefulWidget {
   final String value;
   final bool isFlipped;
@@ -177,18 +175,13 @@ class _MemoryCardState extends State<MemoryCard>
       vsync: this,
     );
     _animation = Tween<double>(begin: 0.0, end: pi).animate(_controller);
-    // 초기 상태에 따른 애니메이션 진행
-    if (widget.isFlipped) {
-      _controller.forward();
-    } else {
-      _controller.reverse();
-    }
+    // 초기 상태에 따라 value를 명시적으로 설정 (isFlipped가 false면 닫힌 상태)
+    _controller.value = widget.isFlipped ? 1.0 : 0.0;
   }
 
   @override
   void didUpdateWidget(MemoryCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // isFlipped 값이 변경되면 애니메이션을 실행합니다.
     if (oldWidget.isFlipped != widget.isFlipped) {
       if (widget.isFlipped) {
         _controller.forward();
@@ -223,7 +216,6 @@ class _MemoryCardState extends State<MemoryCard>
     );
   }
 
-  // 앞면 (카드가 뒤집혀서 보일 때)
   Widget _buildFront() {
     return Transform(
       transform: Matrix4.identity()..rotateY(pi),
@@ -243,7 +235,6 @@ class _MemoryCardState extends State<MemoryCard>
     );
   }
 
-  // 뒷면 (초기 상태)
   Widget _buildBack() {
     return Container(
       decoration: BoxDecoration(
