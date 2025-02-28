@@ -31,18 +31,24 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   int secondsElapsed = 0;
   Timer? timer;
   bool isGameOver = false;
+  bool gameStarted = false;
 
-  @override
-  void initState() {
-    super.initState();
-    initializeCards();
+  // 게임을 시작할 때 상태 초기화 및 타이머 시작
+  void startGame() {
+    setState(() {
+      gameStarted = true;
+      secondsElapsed = 0;
+      isGameOver = false;
+      flippedIndices.clear();
+      initializeCards();
+    });
+
     timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
-      // 게임이 종료되지 않은 경우에만 시간 증가
       if (!isGameOver) {
         setState(() {
           secondsElapsed++;
         });
-        // 1분(60초)이 넘었는데 아직 매칭이 완료되지 않은 경우
+        // 60초가 넘었고 모든 카드가 매칭되지 않았으면 게임 종료
         if (secondsElapsed >= 60 && !cards.every((card) => card.isMatched)) {
           setState(() {
             isGameOver = true;
@@ -67,7 +73,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     cards = allValues.map((value) => MemoryCardData(value: value)).toList();
   }
 
-  // 카드 탭 시 처리 (게임이 끝났거나 이미 뒤집힌 카드면 무시)
+  // 카드 탭 시 처리 (게임 종료 상태이거나 이미 뒤집혔거나 매칭된 카드면 무시)
   void onCardTap(int index) {
     if (isGameOver || cards[index].isFlipped || cards[index].isMatched) return;
 
@@ -76,7 +82,6 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
       flippedIndices.add(index);
     });
 
-    // 두 장 뒤집혔을 때 매칭 여부 확인
     if (flippedIndices.length == 2) {
       Future.delayed(Duration(milliseconds: 500), () {
         int firstIndex = flippedIndices[0];
@@ -105,10 +110,9 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     }
   }
 
-  // 게임 상태에 따른 메시지 반환
+  // 게임 종료 후 상태 메시지 (1분 안에 성공하면 "축하합니다", 아니면 "시간 초과했습니다")
   String get statusMessage {
     if (cards.every((card) => card.isMatched)) {
-      // 모든 카드를 맞췄으면 1분 이내에 맞춘 경우에만 축하 메시지, 아니면 시간 초과 메시지
       return secondsElapsed <= 60 ? "축하합니다" : "시간 초과했습니다";
     } else if (secondsElapsed >= 60) {
       return "시간 초과했습니다";
@@ -122,7 +126,8 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
       appBar: AppBar(
         title: Text('Memory Matching Game'),
       ),
-      body: Padding(
+      body: gameStarted
+          ? Padding(
         padding: const EdgeInsets.all(8.0),
         child: GridView.builder(
           itemCount: cards.length,
@@ -142,9 +147,18 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
             );
           },
         ),
+      )
+          : Center(
+        child: ElevatedButton(
+          onPressed: startGame,
+          child: Text(
+            '시작하기',
+            style: TextStyle(fontSize: 24),
+          ),
+        ),
       ),
-      // 하단 전광판: 상태 메시지(시간 위에)와 경과 시간 표시
-      bottomNavigationBar: Container(
+      bottomNavigationBar: gameStarted
+          ? Container(
         height: 100,
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -183,7 +197,8 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
             ],
           ),
         ),
-      ),
+      )
+          : null,
     );
   }
 }
@@ -232,7 +247,6 @@ class _MemoryCardState extends State<MemoryCard>
       vsync: this,
     );
     _animation = Tween<double>(begin: 0.0, end: pi).animate(_controller);
-    // 초기 상태에 따라 애니메이션 진행
     if (widget.isFlipped) {
       _controller.forward();
     } else {
@@ -277,7 +291,6 @@ class _MemoryCardState extends State<MemoryCard>
     );
   }
 
-  // 카드 앞면 (뒤집혀서 보일 때)
   Widget _buildFront() {
     return Transform(
       transform: Matrix4.identity()..rotateY(pi),
@@ -297,7 +310,6 @@ class _MemoryCardState extends State<MemoryCard>
     );
   }
 
-  // 카드 뒷면 (초기 상태)
   Widget _buildBack() {
     return Container(
       decoration: BoxDecoration(
