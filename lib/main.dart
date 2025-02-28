@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'dart:async';
 
 void main() {
   runApp(MemoryMatchingGameApp());
@@ -27,12 +28,25 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   final int gridSize = 4; // 4x4 격자
   late List<MemoryCardData> cards;
   List<int> flippedIndices = [];
-  int score = 0;
+  int secondsElapsed = 0;
+  Timer? timer;
 
   @override
   void initState() {
     super.initState();
     initializeCards();
+    // 타이머 시작: 1초마다 초를 증가
+    timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
+      setState(() {
+        secondsElapsed++;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
   }
 
   // 8쌍의 카드(총 16개)를 생성 후 무작위로 섞습니다.
@@ -52,6 +66,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
       flippedIndices.add(index);
     });
 
+    // 두 장 뒤집혔을 때 매칭 여부 확인
     if (flippedIndices.length == 2) {
       Future.delayed(Duration(milliseconds: 500), () {
         int firstIndex = flippedIndices[0];
@@ -60,7 +75,6 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
           setState(() {
             cards[firstIndex].isMatched = true;
             cards[secondIndex].isMatched = true;
-            score += 10;
           });
         } else {
           setState(() {
@@ -69,6 +83,11 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
           });
         }
         flippedIndices.clear();
+
+        // 게임 종료 체크: 모든 카드가 매칭되었으면 타이머 중지
+        if (cards.every((card) => card.isMatched)) {
+          timer?.cancel();
+        }
       });
     }
   }
@@ -100,7 +119,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
           },
         ),
       ),
-      // 하단 전광판 스타일의 점수판
+      // 하단 전광판 스타일의 타이머 표시 (경과 시간)
       bottomNavigationBar: Container(
         height: 80,
         decoration: BoxDecoration(
@@ -117,7 +136,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
         ),
         child: Center(
           child: Text(
-            'Score: $score',
+            'Time: ${secondsElapsed}s',
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -131,7 +150,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   }
 }
 
-// 카드 데이터 모델
+// 각 카드의 데이터 모델
 class MemoryCardData {
   final String value;
   bool isFlipped;
@@ -143,7 +162,7 @@ class MemoryCardData {
   });
 }
 
-// 개별 카드 위젯 (애니메이션 포함)
+// 카드 위젯 (개별 애니메이션 포함)
 class MemoryCard extends StatefulWidget {
   final String value;
   final bool isFlipped;
@@ -175,8 +194,12 @@ class _MemoryCardState extends State<MemoryCard>
       vsync: this,
     );
     _animation = Tween<double>(begin: 0.0, end: pi).animate(_controller);
-    // 초기 상태에 따라 value를 명시적으로 설정 (isFlipped가 false면 닫힌 상태)
-    _controller.value = widget.isFlipped ? 1.0 : 0.0;
+    // 초기 상태에 따른 애니메이션 진행
+    if (widget.isFlipped) {
+      _controller.forward();
+    } else {
+      _controller.value = 0.0;
+    }
   }
 
   @override
@@ -216,6 +239,7 @@ class _MemoryCardState extends State<MemoryCard>
     );
   }
 
+  // 앞면 (카드가 뒤집혀서 보일 때)
   Widget _buildFront() {
     return Transform(
       transform: Matrix4.identity()..rotateY(pi),
@@ -235,6 +259,7 @@ class _MemoryCardState extends State<MemoryCard>
     );
   }
 
+  // 뒷면 (초기 상태)
   Widget _buildBack() {
     return Container(
       decoration: BoxDecoration(
