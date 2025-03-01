@@ -14,6 +14,7 @@ class MemoryMatchingGameApp extends StatelessWidget {
       title: 'Memory Matching Game',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        fontFamily: 'poorStory'
       ),
       home: MemoryGameScreen(),
     );
@@ -144,7 +145,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Memory Matching Game'),
+        title: Text('기억력 테스트 게임 !!!!'),
       ),
       body: gameStarted
           ? Column(
@@ -215,7 +216,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
                       ),
                     ),
                   Text(
-                    'Time: ${secondsElapsed}s',
+                    '시간이 가고 있어요!!!: ${secondsElapsed}s',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
