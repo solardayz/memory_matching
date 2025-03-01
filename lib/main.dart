@@ -29,7 +29,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   final int gridSize = 4; // 4x4 격자
   late List<MemoryCardData> cards;
   List<int> flippedIndices = [];
-  int secondsElapsed = 0;
+  int secondsElapsed = 60;
   Timer? timer;
   bool isGameOver = false;
   bool gameStarted = false;
@@ -51,10 +51,10 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
       if (!isGameOver) {
         setState(() {
-          secondsElapsed++;
+          secondsElapsed--;
         });
         // 60초가 넘었는데 모든 카드가 매칭되지 않았으면 게임 종료 및 실패 사운드 재생
-        if (secondsElapsed >= 60 && !cards.every((card) => card.isMatched)) {
+        if (secondsElapsed == 0 && !cards.every((card) => card.isMatched)) {
           setState(() {
             isGameOver = true;
           });
@@ -133,8 +133,8 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
   // 게임 종료 후 상태 메시지 (60초 이내 완성 시 "축하합니다", 아니면 "시간 초과했습니다")
   String get statusMessage {
     if (cards.every((card) => card.isMatched)) {
-      return secondsElapsed <= 60 ? "축하합니다" : "시간 초과했습니다";
-    } else if (secondsElapsed >= 60) {
+      return secondsElapsed > 0 ? "축하합니다" : "시간 초과했습니다";
+    } else if (secondsElapsed == 0) {
       return "시간 초과했습니다";
     }
     return "";
