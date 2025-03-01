@@ -42,7 +42,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     timer?.cancel();
     setState(() {
       gameStarted = true;
-      secondsElapsed = 0;
+      secondsElapsed = 60;
       isGameOver = false;
       flippedIndices.clear();
       initializeCards();
