@@ -53,7 +53,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
         setState(() {
           secondsElapsed--;
         });
-        // 60초가 넘었는데 모든 카드가 매칭되지 않았으면 게임 종료 및 실패 사운드 재생
+        // 시간이 0이 되었는데 모든 카드가 매칭되지 않았으면 게임 종료 및 실패 사운드 재생
         if (secondsElapsed == 0 && !cards.every((card) => card.isMatched)) {
           setState(() {
             isGameOver = true;
@@ -102,14 +102,14 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
             cards[firstIndex].isMatched = true;
             cards[secondIndex].isMatched = true;
           });
-          // 매칭 성공 사운드 재생
+          // 매칭 성공 시 사운드 재생
           _audioPlayer.play(AssetSource('sounds/match.mp3'));
         } else {
           setState(() {
             cards[firstIndex].isFlipped = false;
             cards[secondIndex].isFlipped = false;
           });
-          // 매칭 실패(미스매칭) 사운드 재생
+          // 매칭 실패(미스매칭) 시 사운드 재생
           _audioPlayer.play(AssetSource('sounds/mismatch.mp3'));
         }
         flippedIndices.clear();
@@ -120,7 +120,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
             isGameOver = true;
           });
           timer?.cancel();
-          if (secondsElapsed <= 60) {
+          if (secondsElapsed > 0) {
             _audioPlayer.play(AssetSource('sounds/success.mp3'));
           } else {
             _audioPlayer.play(AssetSource('sounds/failure.mp3'));
@@ -130,7 +130,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     }
   }
 
-  // 게임 종료 후 상태 메시지 (60초 이내 완성 시 "축하합니다", 아니면 "시간 초과했습니다")
+  // 게임 종료 후 상태 메시지 ("축하합니다" 또는 "시간 초과했습니다")
   String get statusMessage {
     if (cards.every((card) => card.isMatched)) {
       return secondsElapsed > 0 ? "축하합니다" : "시간 초과했습니다";
@@ -185,7 +185,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
               ),
             ),
           ),
-          // 점수판 영역 (상태 메시지 및 경과 시간)
+          // 점수판 영역 (상태 메시지 및 남은 시간)
           Container(
             height: 80,
             width: double.infinity,
